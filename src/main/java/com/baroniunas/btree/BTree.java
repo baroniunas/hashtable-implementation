@@ -4,22 +4,22 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class BTree<K extends Comparable<K>, V> {
-    private Node<K, V> root;
+    private Node<K, V> node;
 
     private static final Logger logger = LogManager.getLogger(BTree.class);
 
     public BTree() {
-        root = new Node<>();
-        logger.info("BTree created. Root is {}", root);
+        node = new Node<>();
+        logger.info("BTree created.");
     }
 
     public void insert(K key, V value) {
-        logger.debug("Inserting key {} with {} into BTree", key, value);
-        Node<K, V> rootNode = root;
+        logger.debug("Inserting key {} with value {} into BTree", key, value);
+        Node<K, V> rootNode = node;
         if (rootNode.numberOfKeys == Node.MIN_DEGREE * 2 - 1) {
-            logger.warn("Root node {} is full creating new node and splitting..", rootNode.toString());
+            logger.warn("Node {} is full creating new node and splitting..", rootNode.toString());
             Node<K, V> newRoot = new Node<>();
-            root = newRoot;
+            node = newRoot;
             newRoot.leaf = false;
             newRoot.numberOfKeys = 0;
             newRoot.children[0] = rootNode;
@@ -30,14 +30,39 @@ public class BTree<K extends Comparable<K>, V> {
         }
     }
 
+    public void delete(K key) {
+        if (node == null) {
+            logger.warn("Tree is empty, nothing to delete.");
+            return;
+        }
+
+        node.delete(key);
+
+        if (node.numberOfKeys == 0) {
+            if (!node.leaf) node = node.children[0];
+            else node = null;
+        }
+    }
+
     public V search(K key) {
-        Entry<K, V> entry = root.search(key);
-        return entry != null ? entry.value : null;
+        logger.info("Searching key <{}> in BTree..", key);
+        Entry<K, V> entry = node.search(key);
+        if (entry != null) {
+            logger.info("Found key <{}> with value -{} in BTree.", key, entry.value);
+            return entry.value;
+        }
+        logger.warn("Provided key <{}> not found in BTree.", key);
+        return null;
     }
 
     public void traverse() {
-        if (root != null) {
-            root.traverse();
+        if (node != null) {
+            node.traverse();
         }
+    }
+
+    @Override
+    public String toString() {
+        return node.toString();
     }
 }

@@ -24,7 +24,7 @@ public class HashTable<K extends Comparable<K>, V> {
     private void resize(int newCapacity) {
         if (bTree != null) return;
 
-        logger.info("Starting to resize tables capacity from {} to {}.", INITIAL_CAPACITY, newCapacity);
+        logger.info("Starting to resize table capacity to {}.", newCapacity);
         Entity<K, V>[] oldTable = table;
         table = new Entity[newCapacity];
         size = 0;
@@ -61,14 +61,14 @@ public class HashTable<K extends Comparable<K>, V> {
 
         if (table[index] == null) {
             table[index] = newEntity;
-            logger.info("Inserted key -{}- with value {} at index: {}.", key, value, index);
+            logger.info("Inserted key <{}> with value <{}> at index: {}.", key, value, index);
         } else {
             Entity<K, V> currentEntity = table[index];
             Entity<K, V> previousEntity = null;
             while (currentEntity != null) {
                 if (currentEntity.key.equals(key)) {
                     currentEntity.value = value;
-                    logger.info("Updated key {} with value {} at index: {}.", key, value, index);
+                    logger.info("Updated key <{}> with value <{}> at index: {}.", key, value, index);
                     return;
                 }
                 previousEntity = currentEntity;
@@ -76,10 +76,10 @@ public class HashTable<K extends Comparable<K>, V> {
             }
             assert previousEntity != null;
             previousEntity.next = newEntity;
-            logger.info("Inserted key {} with value {} at index: {} in chain.", key, value, index);
+            logger.info("Inserted key <{}> with value <{}> at index: {} in chain.", key, value, index);
         }
         size++;
-        logger.info("Element with key -{}- added successfully. Current size: {}", key, size);
+        logger.info("Element with key <{}> added successfully. Current size: {}", key, size);
 
         if (size == TREE_THRESHOLD) {
             transformToBTree();
@@ -87,6 +87,7 @@ public class HashTable<K extends Comparable<K>, V> {
     }
 
     private void transformToBTree() {
+        logger.debug("Table size exceeded {}, transforming from array with linked lists, to BTree..", TREE_THRESHOLD);
         bTree = new BTree<>();
         for (Entity<K, V> entity : table) {
             while (entity != null) {
@@ -94,13 +95,13 @@ public class HashTable<K extends Comparable<K>, V> {
                 entity = entity.next;
             }
         }
-        table = null;
+        logger.info("Transformation was successful");
     }
 
     public V getValue(K key) {
 
         if (key == null) {
-            logger.error("Key is null. Cannot retrieve from the table.");
+            logger.error("Key is null. Cannot retrieve value from the table.");
             throw new IllegalArgumentException("Key cannot be null");
         }
 
@@ -108,26 +109,33 @@ public class HashTable<K extends Comparable<K>, V> {
             return bTree.search(key);
         }
 
-        logger.debug("Attempting to get element with key -{}- from the table", key);
+        logger.debug("Attempting to get element with key <{}> from the table", key);
         int index = hash(key);
         Entity<K, V> currentEntity = table[index];
 
         while (currentEntity != null) {
             if (currentEntity.key.equals(key)) {
-                logger.info("Element with key -{}- found and index {}.", key, index);
+                logger.info("Element with key <{}> found and index {}.", key, index);
                 return currentEntity.value;
             }
             currentEntity = currentEntity.next;
         }
-        logger.warn("Element with key -{}- not found in the table", key);
+        logger.warn("Element with key <{}> not found in the table", key);
         return null;
     }
 
     public V removePair(K key) {
-        logger.debug("Attempting to remove element with key -{}- from the table", key);
+
+        logger.debug("Attempting to remove element with key <{}> from the table", key);
         if (key == null) {
             logger.error("Key is null. Cannot remove from the table.");
             throw new IllegalArgumentException("Key cannot be null");
+        }
+
+        if (bTree != null) {
+            V value = bTree.search(key);
+            bTree.delete(key);
+            return value;
         }
 
         int index = hash(key);
@@ -142,7 +150,7 @@ public class HashTable<K extends Comparable<K>, V> {
                     previousEntity.next = currentEntity.next;
                 }
                 size--;
-                logger.info("Element with key -{}- removed successfully. Current size: {}", key, size);
+                logger.info("Element with key <{}> removed successfully. Current size: {}", key, size);
                 if (size <= table.length / 4 && table.length > INITIAL_CAPACITY) {
                     logger.info("Table size decreased, shrinking to smaller capacity..");
                     resize(table.length / 2);
@@ -152,17 +160,13 @@ public class HashTable<K extends Comparable<K>, V> {
             previousEntity = currentEntity;
             currentEntity = currentEntity.next;
         }
-        logger.warn("Element with key -{}- not found in the table", key);
+        logger.warn("Element with key <{}> not found in the table", key);
         return null;
     }
 
-    public void printTree() {
-        bTree.traverse();
-    }
 
     @Override
     public String toString() {
-
         StringBuilder sb = new StringBuilder();
         sb.append("{");
         for (Entity<K, V> entity : table) {

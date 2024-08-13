@@ -37,7 +37,7 @@ class HashTableTest {
 
 
     @Test
-    void PuttingNullKeyNotAvailable() {
+    void puttingNullKeyNotAvailable() {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             hashTable.put(null, 1);
         });
@@ -45,7 +45,7 @@ class HashTableTest {
     }
 
     @Test
-    void PuttingNullValueNotAvailable() {
+    void puttingNullValueNotAvailable() {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             hashTable.put("One", null);
         });
