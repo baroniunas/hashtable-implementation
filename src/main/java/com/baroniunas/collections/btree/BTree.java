@@ -35,12 +35,10 @@ public class BTree<K extends Comparable<K>, V> {
             logger.warn("Tree is empty, nothing to delete.");
             return;
         }
-
         node.delete(key);
 
-        if (node.numberOfKeys == 0) {
-            if (!node.leaf) node = node.children[0];
-            else node = null;
+        if (node.numberOfKeys == 0 && !node.leaf) {
+            node = node.children[0];
         }
     }
 
