@@ -1,175 +1,128 @@
 package com.baroniunas.hashtable;
 
-import com.baroniunas.btree.BTree;
+import com.baroniunas.collections.Collections;
+import com.baroniunas.collections.btree.BTree;
+import com.baroniunas.collections.linkedlist.LinkedList;
+import com.baroniunas.collections.linkedlist.Node;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class HashTable<K extends Comparable<K>, V> {
     private static final int INITIAL_CAPACITY = 3;
-    private static final float LOAD_FACTOR = 0.75f;
+    private static final float LOAD_FACTOR = 0.65f;
     private static final int TREE_THRESHOLD = 6;
-    private Entity<K, V>[] table;
-    private int size;
-    private BTree<K, V> bTree;
+    private int arraySize;
+    private Collections<K, V>[] collections;
+
 
     private static final Logger logger = LogManager.getLogger(HashTable.class);
 
     @SuppressWarnings("unchecked")
     public HashTable() {
-        table = new Entity[INITIAL_CAPACITY];
-        logger.info("Initialized HashTable with capacity of {}.", INITIAL_CAPACITY);
+        collections = new Collections[INITIAL_CAPACITY];
+        arraySize = 0;
+        logger.info("Hash table initialized, initial capacity: {}", INITIAL_CAPACITY);
     }
 
     @SuppressWarnings("unchecked")
     private void resize(int newCapacity) {
-        if (bTree != null) return;
-
         logger.info("Starting to resize table capacity to {}.", newCapacity);
-        Entity<K, V>[] oldTable = table;
-        table = new Entity[newCapacity];
-        size = 0;
+        Collections<K, V>[] oldCollections = collections;
+        collections = new Collections[newCapacity];
+        arraySize = 0;
 
-        for (Entity<K, V> entity : oldTable) {
-            while (entity != null) {
-                put(entity.key, entity.value);
-                entity = entity.next;
+        for (Collections<K, V> collection : oldCollections) {
+            if (collection != null) {
+                if (collection instanceof LinkedList) {
+                    Node<K, V> node = ((LinkedList<K, V>) collection).getHead();
+                    while (node != null) {
+                        int newIndex = hash(node.getKey(), newCapacity);
+                        if(collections[newIndex] == null) {
+                            collections[newIndex] = new LinkedList<>();
+                            arraySize++;
+                        }
+                        collections[newIndex].put(node.getKey(), node.getValue());
+                        node = node.getNext();
+                    }
+                }
             }
         }
-        logger.info("Resizing complete. New capacity: {}", newCapacity);
+        logger.info("Resizing completed.");
     }
 
     public void put(K key, V value) {
-
-        if (bTree != null) {
-            bTree.insert(key, value);
-            return;
-        }
-
-        logger.debug("Adding new element with key -{}- to the table", key);
-        if (key == null || value == null) {
-            logger.error("Key or value is null. Cannot add to the table.");
-            throw new IllegalArgumentException("Key or value cannot be null");
-        }
-
-        if ((float) size / table.length > LOAD_FACTOR) {
-            logger.info("Table exceeded it's load factor. Resizing.. New capacity: {}", table.length);
-            resize(table.length * 2);
-        }
-
         int index = hash(key);
-        Entity<K, V> newEntity = new Entity<>(key, value, null);
 
-        if (table[index] == null) {
-            table[index] = newEntity;
-            logger.info("Inserted key <{}> with value <{}> at index: {}.", key, value, index);
-        } else {
-            Entity<K, V> currentEntity = table[index];
-            Entity<K, V> previousEntity = null;
-            while (currentEntity != null) {
-                if (currentEntity.key.equals(key)) {
-                    currentEntity.value = value;
-                    logger.info("Updated key <{}> with value <{}> at index: {}.", key, value, index);
-                    return;
-                }
-                previousEntity = currentEntity;
-                currentEntity = currentEntity.next;
-            }
-            assert previousEntity != null;
-            previousEntity.next = newEntity;
-            logger.info("Inserted key <{}> with value <{}> at index: {} in chain.", key, value, index);
+        logger.info("Adding new element to the table with key <{}> and value <{}> at index {}.", key, value, index);
+
+        if (collections[index] == null) {
+            logger.info("No collection found at index {}. Initializing new LinkedList.", index);
+            collections[index] = new LinkedList<>();
+            arraySize++;
+            logger.info("Collection array size is now {}.", arraySize);
         }
-        size++;
-        logger.info("Element with key <{}> added successfully. Current size: {}", key, size);
 
-        if (size == TREE_THRESHOLD) {
-            transformToBTree();
+        Collections<K, V> collection = collections[index];
+
+        if ( arraySize >= collections.length * LOAD_FACTOR) {
+            resize(collections.length * 2);
+        }
+
+        collection.put(key, value);
+
+        if (collection instanceof LinkedList && collection.getSize() == TREE_THRESHOLD) {
+            transformToBTree(index);
         }
     }
 
-    private void transformToBTree() {
-        logger.debug("Table size exceeded {}, transforming from array with linked lists, to BTree..", TREE_THRESHOLD);
-        bTree = new BTree<>();
-        for (Entity<K, V> entity : table) {
-            while (entity != null) {
-                bTree.insert(entity.key, entity.value);
-                entity = entity.next;
-            }
+    private void transformToBTree(int index) {
+        logger.info("Transforming to btree index {}.", index);
+        LinkedList<K, V> linkedList = (LinkedList<K, V>) collections[index];
+        BTree<K, V> bTree = new BTree<>();
+
+        Node<K, V> node = linkedList.getHead();
+        while (node != null) {
+            bTree.put(node.getKey(), node.getValue());
+            node = node.getNext();
         }
-        logger.info("Transformation was successful");
+
+        collections[index] = bTree;
+        logger.info("Transformation successful.");
     }
 
     public V getValue(K key) {
-
-        if (key == null) {
-            logger.error("Key is null. Cannot retrieve value from the table.");
-            throw new IllegalArgumentException("Key cannot be null");
-        }
-
-        if (bTree != null) {
-            return bTree.search(key);
-        }
-
-        logger.debug("Attempting to get element with key <{}> from the table", key);
         int index = hash(key);
-        Entity<K, V> currentEntity = table[index];
+        return collections[index].getValue(key);
+    }
 
-        while (currentEntity != null) {
-            if (currentEntity.key.equals(key)) {
-                logger.info("Element with key <{}> found and index {}.", key, index);
-                return currentEntity.value;
-            }
-            currentEntity = currentEntity.next;
+    public Collections<K, V> getCollectionAtIndex(int index) {
+        if (index < 0 || index >= collections.length) {
+            throw new IndexOutOfBoundsException("Index out of bounds");
         }
-        logger.warn("Element with key <{}> not found in the table", key);
-        return null;
+        return collections[index];
     }
 
     public V removePair(K key) {
-
-        logger.debug("Attempting to remove element with key <{}> from the table", key);
-        if (key == null) {
-            logger.error("Key is null. Cannot remove from the table.");
-            throw new IllegalArgumentException("Key cannot be null");
-        }
-
-        if (bTree != null) {
-            V value = bTree.search(key);
-            bTree.delete(key);
-            return value;
-        }
-
         int index = hash(key);
-        Entity<K, V> currentEntity = table[index];
-        Entity<K, V> previousEntity = null;
 
-        while (currentEntity != null) {
-            if (currentEntity.key.equals(key)) {
-                if (previousEntity == null) {
-                    table[index] = currentEntity.next;
-                } else {
-                    previousEntity.next = currentEntity.next;
-                }
-                size--;
-                logger.info("Element with key <{}> removed successfully. Current size: {}", key, size);
-                if (size <= table.length / 4 && table.length > INITIAL_CAPACITY) {
-                    logger.info("Table size decreased, shrinking to smaller capacity..");
-                    resize(table.length / 2);
-                }
-                return currentEntity.value;
-            }
-            previousEntity = currentEntity;
-            currentEntity = currentEntity.next;
+        if (collections[index] == null)
+            return null;
+
+        V value = collections[index].remove(key);
+        if (value != null && collections[index].getSize() == 0) {
+            collections[index] = null;
+            arraySize--;
         }
-        logger.warn("Element with key <{}> not found in the table", key);
-        return null;
+
+        return value;
     }
 
 
-    @Override
+ /*   @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        for (Entity<K, V> entity : table) {
+        for (Entity<K, V> entity : collections) {
             for (Entity<K, V> next = entity; next != null; next = next.next) {
                 sb.append(next.key)
                         .append("=")
@@ -182,35 +135,24 @@ public class HashTable<K extends Comparable<K>, V> {
         }
         sb.append("}");
         return sb.toString();
-    }
+    }*/
 
     public int hash(K key) {
-        return (key == null) ? 0 : Math.abs(key.hashCode() % table.length);
+        return (key == null) ? 0 : Math.abs(key.hashCode() % collections.length);
     }
 
-    public int getSize() {
-        return size;
+    private int hash(K key, int capacity) {
+        return (key == null) ? 0 : Math.abs(key.hashCode() % capacity);
     }
 
-    public BTree<K, V> getBTree() {
-        return bTree;
+    public int getArraySize() {
+        return arraySize;
     }
 
-    public Entity<K, V>[] getTable() {
-        return table;
+    public Collections<K, V>[] getDataStructure() {
+        return collections;
     }
 
-    public int getCurrentCapacity() { return table.length;}
+    public int getCurrentCapacity() { return collections.length;}
 
-    private static class Entity<K, V> {
-        final K key;
-        V value;
-        Entity<K, V> next;
-
-        Entity(K key, V value, Entity<K, V> next) {
-            this.key = key;
-            this.value = value;
-            this.next = next;
-        }
-    }
 }

@@ -1,4 +1,4 @@
-package com.baroniunas.btree;
+package com.baroniunas.collections.btree;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

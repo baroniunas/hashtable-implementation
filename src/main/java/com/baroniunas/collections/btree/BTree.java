@@ -1,10 +1,12 @@
-package com.baroniunas.btree;
+package com.baroniunas.collections.btree;
 
+import com.baroniunas.collections.Collections;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class BTree<K extends Comparable<K>, V> {
+public class BTree<K extends Comparable<K>, V> implements Collections<K,V> {
     private Node<K, V> node;
+    private int size = 0;
 
     private static final Logger logger = LogManager.getLogger(BTree.class);
 
@@ -13,7 +15,8 @@ public class BTree<K extends Comparable<K>, V> {
         logger.info("BTree created.");
     }
 
-    public void insert(K key, V value) {
+    @Override
+    public void put(K key, V value) {
         logger.debug("Inserting key {} with value {} into BTree", key, value);
         Node<K, V> rootNode = node;
         if (rootNode.numberOfKeys == Node.MIN_DEGREE * 2 - 1) {
@@ -25,24 +28,40 @@ public class BTree<K extends Comparable<K>, V> {
             newRoot.children[0] = rootNode;
             newRoot.splitChild(0, rootNode);
             newRoot.insertNonFull(new Entry<>(key, value));
+            size++;
         } else {
             rootNode.insertNonFull(new Entry<>(key, value));
+            size++;
         }
     }
 
-    public void delete(K key) {
+    @Override
+    public V remove(K key) {
         if (node == null) {
-            logger.warn("Tree is empty, nothing to delete.");
-            return;
+            logger.warn("Tree is empty, nothing to remove.");
+            return null;
         }
+        logger.info("Removing key {} from BTree", key);
         node.delete(key);
-
+        size--;
         if (node.numberOfKeys == 0 && !node.leaf) {
             node = node.children[0];
         }
+        return null;
     }
 
-    public V search(K key) {
+    @Override
+    public int getSize() {
+        return size;
+    }
+
+    @Override
+    public boolean containsKey(K key) {
+        return false;
+    }
+
+    @Override
+    public V getValue(K key) {
         logger.info("Searching key <{}> in BTree..", key);
         Entry<K, V> entry = node.search(key);
         if (entry != null) {

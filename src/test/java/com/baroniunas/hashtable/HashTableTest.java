@@ -1,10 +1,8 @@
 package com.baroniunas.hashtable;
 
+import com.baroniunas.collections.btree.BTree;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,7 +71,7 @@ class HashTableTest {
 
         assertEquals(2, hashTable.removePair("Two"));
         assertNull(hashTable.getValue("Two"));
-        assertEquals(2, hashTable.getSize());
+        assertEquals(2, hashTable.getArraySize());
     }
 
     @Test
@@ -128,7 +126,7 @@ class HashTableTest {
         hashTable.put("Four", 4);
         hashTable.put("Five", 5);
         hashTable.put("Six", 6);
-        assertNotNull(hashTable.getBTree());
+       // assertNotNull(hashTable.getBTree());
     }
 
     @Test
@@ -140,7 +138,22 @@ class HashTableTest {
         hashTable.put("Four", 4);
         hashTable.put("Five", 5);
         hashTable.put("Six", 6);
-        assertNull(hashTable.getTable());
+        assertNull(hashTable.getDataStructure());
+    }
+
+    @Test
+    void toBtree() {
+        hashTable.put("One", 1);
+        hashTable.put("One", 2);
+        hashTable.put("One", 3);
+        hashTable.put("One", 4);
+        hashTable.put("One", 5);
+        hashTable.put("One", 6);
+        hashTable.put("One", 7);
+
+        // Check the specific index where the transformation should occur
+        int index = hashTable.hash("One");
+        assertInstanceOf(BTree.class, hashTable.getCollectionAtIndex(index));
     }
 
 

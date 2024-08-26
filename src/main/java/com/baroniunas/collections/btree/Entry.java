@@ -1,4 +1,4 @@
-package com.baroniunas.btree;
+package com.baroniunas.collections.btree;
 
 public class Entry <K, V>{
     K key;

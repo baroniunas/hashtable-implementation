@@ -2,7 +2,9 @@ package com.baroniunas.collections;
 
 public interface Collections<K,V> {
 
-    public void put(K key, V value);
-    public V getValue(K key);
-    public V remove(K key);
+    void put(K key, V value);
+    V getValue(K key);
+    V remove(K key);
+    int getSize();
+    boolean containsKey(K key);
 }
